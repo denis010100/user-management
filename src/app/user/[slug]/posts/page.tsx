@@ -14,6 +14,7 @@ import axios from "axios"
 import { useEffect, useState } from "react"
 
 const updateUser = async ({ id, data }: { id: string; data: any }) => {
+  console.log(data)
   const transformedData = {
     ...data,
     address: {
@@ -22,6 +23,7 @@ const updateUser = async ({ id, data }: { id: string; data: any }) => {
       city: data.city,
     },
   }
+  console.log(transformedData)
   delete transformedData.street
   delete transformedData.suite
   delete transformedData.city
@@ -149,15 +151,9 @@ export default function Page({
   }
 
   const handleFormSubmit = (values: any) => {
+    console.log(values)
     if (userData) {
-      const transformedValues = {
-        ...values,
-        street: values.address.street,
-        suite: values.address.suite,
-        city: values.address.city,
-      }
-      delete transformedValues.address
-      userMutation.mutate({ id: userData.id, data: transformedValues })
+      userMutation.mutate({ id: userData.id, data: userData })
     }
   }
 
