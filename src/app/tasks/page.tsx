@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, ChangeEvent } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import React, { useState, ChangeEvent, useEffect } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Table, Switch, Input, Select, Pagination, message } from "antd"
 import axios from "axios"
 import type { ColumnsType } from "antd/es/table"
@@ -21,27 +21,14 @@ const fetchTasks = async (): Promise<Task[]> => {
   return data
 }
 
-interface UpdateTaskStatusParams {
-  id: number
-  completed: boolean
-}
-
-const updateTaskStatus = async ({
-  id,
-  completed,
-}: UpdateTaskStatusParams): Promise<void> => {
-  await axios.patch(`https://jsonplaceholder.typicode.com/todos/${id}`, {
-    completed,
-  })
-}
-
-const Tasks: React.FC = () => {
+const Tasks = () => {
   const queryClient = useQueryClient()
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [pageSize] = useState<number>(10)
   const [filterStatus, setFilterStatus] = useState<boolean | null>(null)
   const [filterTitle, setFilterTitle] = useState<string>("")
   const [filterOwner, setFilterOwner] = useState<string | null>(null)
+  const [localTasks, setLocalTasks] = useState<Task[]>([])
 
   const {
     data: tasks,
@@ -49,35 +36,29 @@ const Tasks: React.FC = () => {
     isLoading,
   } = useQuery({ queryKey: ["tasks"], queryFn: fetchTasks })
 
-  const mutation = useMutation<void, Error, UpdateTaskStatusParams>({
-    mutationFn: updateTaskStatus,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] })
-      message.success("Task status updated successfully!")
-    },
-    onError: () => {
-      message.error("Failed to update task status.")
-    },
-  })
+  useEffect(() => {
+    if (tasks) {
+      setLocalTasks(tasks)
+    }
+  }, [tasks])
 
   const handleStatusChange = (id: number, completed: boolean) => {
-    mutation.mutate({ id, completed })
+    setLocalTasks((prevTasks) =>
+      prevTasks.map((task) => (task.id === id ? { ...task, completed } : task))
+    )
+    message.success("Task status updated locally!")
   }
 
-  const filteredTasks = tasks
-    ? tasks
-        .filter((task: Task) =>
-          filterStatus !== null && filterStatus !== undefined
-            ? task.completed === filterStatus
-            : true
-        )
-        .filter((task: Task) =>
-          filterTitle ? task.title.includes(filterTitle) : true
-        )
-        .filter((task: Task) =>
-          filterOwner ? task.userId === parseInt(filterOwner) : true
-        )
-    : []
+  const filteredTasks = localTasks
+    .filter((task) =>
+      filterStatus !== null && filterStatus !== undefined
+        ? task.completed === filterStatus
+        : true
+    )
+    .filter((task) => (filterTitle ? task.title.includes(filterTitle) : true))
+    .filter((task) =>
+      filterOwner ? task.userId === parseInt(filterOwner) : true
+    )
 
   const paginatedTasks = filteredTasks.slice(
     (currentPage - 1) * pageSize,
@@ -89,21 +70,25 @@ const Tasks: React.FC = () => {
       title: "ID",
       dataIndex: "id",
       key: "id",
+      className: "w-[5%]",
     },
     {
       title: "Title",
       dataIndex: "title",
       key: "title",
+      className: "w-[75%]",
     },
     {
       title: "Owner",
       dataIndex: "userId",
       key: "userId",
+      className: "w-[10%]",
     },
     {
       title: "Status",
       dataIndex: "completed",
       key: "completed",
+      className: "w-[10%]",
       render: (completed, record) => (
         <Switch
           checked={completed}
@@ -115,18 +100,18 @@ const Tasks: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: "16px" }}>
+      <div className="flex flex-row gap-4 mb-8">
         <Search
+          className="w-[200px]"
           placeholder="Filter by title"
           onChange={(e: ChangeEvent<HTMLInputElement>) =>
             setFilterTitle(e.target.value)
           }
-          style={{ width: 200, marginRight: "8px" }}
         />
         <Select
+          className="w-[200px]"
           placeholder="Filter by status"
           onChange={(value: boolean | null) => setFilterStatus(value)}
-          style={{ width: 200, marginRight: "8px" }}
           allowClear
           value={filterStatus}
         >
@@ -134,11 +119,11 @@ const Tasks: React.FC = () => {
           <Option value={false}>Not Completed</Option>
         </Select>
         <Input
+          className="w-[200px]"
           placeholder="Filter by owner"
           onChange={(e: ChangeEvent<HTMLInputElement>) =>
             setFilterOwner(e.target.value)
           }
-          style={{ width: 200 }}
         />
       </div>
       <Table
