@@ -12,9 +12,9 @@ import {
 } from "antd"
 import axios from "axios"
 import { useEffect, useState } from "react"
+import { useSelector, useDispatch } from "react-redux"
 
 const updateUser = async ({ id, data }: { id: string; data: any }) => {
-  console.log(data)
   const transformedData = {
     ...data,
     address: {
@@ -23,7 +23,6 @@ const updateUser = async ({ id, data }: { id: string; data: any }) => {
       city: data.city,
     },
   }
-  console.log(transformedData)
   delete transformedData.street
   delete transformedData.suite
   delete transformedData.city
@@ -47,20 +46,14 @@ export default function Page({
 }: {
   params: { slug: string }
 }) {
-  const fetchUser = async () => {
-    const { data } = await axios.get(
-      `https://jsonplaceholder.typicode.com/users/${slug}`
-    )
-    return data
-  }
-
+  const user = useSelector((state: any) => state.user.user)
+  const dispatch = useDispatch()
   const fetchUserPosts = async () => {
     const { data } = await axios.get(
       `https://jsonplaceholder.typicode.com/users/${slug}/posts`
     )
     return data
   }
-
   const [form] = Form.useForm()
   const [postForm] = Form.useForm()
   const [isFormChanged, setIsFormChanged] = useState(false)
@@ -74,15 +67,6 @@ export default function Page({
   const handleCancel = () => {
     setIsModalOpen(false)
   }
-
-  const {
-    data: userData,
-    error: userError,
-    isLoading: userLoading,
-  } = useQuery({
-    queryKey: ["users", slug],
-    queryFn: fetchUser,
-  })
 
   const {
     data: userPosts,
@@ -117,6 +101,7 @@ export default function Page({
       setLocalUserPosts((prevPosts) =>
         prevPosts.filter((post: any) => post.id.toString() !== variables.id)
       )
+      dispatch(userPosts(localUserPosts))
       message.success("Post deleted successfully")
       setIsModalOpen(false)
     },
@@ -126,16 +111,18 @@ export default function Page({
   })
 
   useEffect(() => {
-    form.setFieldsValue(userData)
-  }, [userData, form])
+    if (user) {
+      form.setFieldsValue(user)
+    }
+  }, [user, form])
 
   const handleFormChange = (changedValues: any) => {
-    if (userData) {
+    if (user) {
       const isChanged = Object.keys(changedValues).some((key) => {
         if (key === "street" || key === "suite" || key === "city") {
-          return changedValues[key] !== userData.address[key]
+          return changedValues[key] !== user.address[key]
         }
-        return changedValues[key] !== userData[key]
+        return changedValues[key] !== user[key]
       })
       setIsFormChanged(isChanged)
     }
@@ -151,15 +138,14 @@ export default function Page({
   }
 
   const handleFormSubmit = (values: any) => {
-    console.log(values)
-    if (userData) {
-      userMutation.mutate({ id: userData.id, data: userData })
+    if (user) {
+      userMutation.mutate({ id: user.id, data: values })
     }
   }
 
   const handlePostFormSubmit = (values: any) => {
     if (currentPost) {
-      userMutation.mutate({ id: userData.id, data: values })
+      userMutation.mutate({ id: user.id, data: values })
     }
   }
 
@@ -238,13 +224,7 @@ export default function Page({
     ),
   }))
 
-  if (userLoading || postsLoading) return <div>Loading...</div>
-  if (userError !== null && postsError !== null)
-    return (
-      <div>
-        An error occurred: {userError.toString() || postsError.toString()}
-      </div>
-    )
+  if (postsLoading) return <div>Loading...</div>
 
   return (
     <div className="flex flex-col gap-8 items-center">
@@ -308,7 +288,7 @@ export default function Page({
             </Form.Item>
             <Form.Item
               style={{ flex: "1 0 45%" }}
-              initialValue={userData.address?.street}
+              initialValue={user.address?.street}
               rules={[
                 {
                   required: true,
@@ -322,7 +302,7 @@ export default function Page({
             </Form.Item>
             <Form.Item
               style={{ flex: "1 0 45%" }}
-              initialValue={userData.address?.suite}
+              initialValue={user.address?.suite}
               rules={[
                 {
                   required: true,
@@ -336,7 +316,7 @@ export default function Page({
             </Form.Item>
             <Form.Item
               style={{ flex: "1 0 45%" }}
-              initialValue={userData.address?.city}
+              initialValue={user.address?.city}
               rules={[
                 {
                   required: true,
@@ -363,7 +343,7 @@ export default function Page({
               <Button
                 onClick={() => {
                   form.resetFields()
-                  form.setFieldsValue(userData)
+                  form.setFieldsValue(user)
                   setIsFormChanged(false)
                 }}
                 danger

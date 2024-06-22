@@ -6,6 +6,8 @@ import type { CollapseProps } from "antd"
 import { Button, Collapse, Form, Input, message } from "antd"
 import { useState } from "react"
 import Link from "next/link"
+import { useDispatch } from "react-redux"
+import { setUser } from "@/lib/features/users/usersSlice"
 
 const fetchUsers = async () => {
   const { data } = await axios.get("https://jsonplaceholder.typicode.com/users")
@@ -27,18 +29,18 @@ const updateUser = async ({ id, data }: { id: string; data: any }) => {
 
   const response = await axios.patch(
     `https://jsonplaceholder.typicode.com/users/${id}`,
-    data
+    transformedData
   )
   return response.data
 }
 
 export default function Home() {
   const [isFormChanged, setIsFormChanged] = useState(false)
-  const [currentUser, setCurrentUser] = useState(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [activeKey, setActiveKey] = useState<string | string[]>("")
-
   const [form] = Form.useForm()
   const queryClient = useQueryClient()
+  const dispatch = useDispatch()
 
   const { data, error, isLoading } = useQuery({
     queryKey: ["users"],
@@ -66,21 +68,25 @@ export default function Home() {
       form.resetFields()
       form.setFieldsValue(user)
       setIsFormChanged(false)
+      dispatch(setUser(user)) // Dispatch action to set current user in the Redux store
     }
   }
 
   const handleFormChange = (changedValues: any, allValues: any) => {
     if (currentUser) {
-      const isChanged = Object.keys(changedValues).some(
-        (key) => changedValues[key] !== currentUser[key]
-      )
+      const isChanged = Object.keys(changedValues).some((key) => {
+        if (key === "street" || key === "suite" || key === "city") {
+          return changedValues[key] !== currentUser.address[key]
+        }
+        return changedValues[key] !== currentUser[key]
+      })
       setIsFormChanged(isChanged)
     }
   }
 
   const handleFormSubmit = (values: any) => {
     if (currentUser) {
-      mutation.mutate({ id: currentUser, data: values })
+      mutation.mutate({ id: currentUser.id, data: values })
     }
   }
 
@@ -149,7 +155,7 @@ export default function Home() {
             <Input />
           </Form.Item>
           <Form.Item
-            initialValue={user.address.street}
+            initialValue={currentUser?.address?.street}
             rules={[
               {
                 required: true,
@@ -162,7 +168,7 @@ export default function Home() {
             <Input />
           </Form.Item>
           <Form.Item
-            initialValue={user.address.suite}
+            initialValue={currentUser?.address?.suite}
             rules={[
               {
                 required: true,
@@ -175,7 +181,7 @@ export default function Home() {
             <Input />
           </Form.Item>
           <Form.Item
-            initialValue={user.address.city}
+            initialValue={currentUser?.address?.city}
             rules={[
               {
                 required: true,
