@@ -6,7 +6,6 @@ import userEvent from "@testing-library/user-event"
 import { userReducer } from "../lib/features/users/usersSlice"
 import Home from "./page"
 
-// Mock data for useQuery
 const mockUsers = [
   {
     "id": 1,

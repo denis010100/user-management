@@ -68,7 +68,7 @@ export default function Home() {
       form.resetFields()
       form.setFieldsValue(user)
       setIsFormChanged(false)
-      dispatch(setUser(user)) // Dispatch action to set current user in the Redux store
+      dispatch(setUser(user))
     }
   }
 
